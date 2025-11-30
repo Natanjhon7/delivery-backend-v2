@@ -1,77 +1,121 @@
 const Product = require('../models/Product');
 
-// GET / - Listar todos os produtos (JÁ EXISTE)
+// ✅ DADOS MOCK COMO FALLBACK
+const mockProducts = [
+  {
+    _id: "1",
+    name: "Heineken 330ml",
+    price: 8.90,
+    category: "CERVEJAS",
+    description: "Cerveja Heineken lata 330ml",
+    imageUrl: "https://imagens.ne10.uol.com.br/veiculos/_midias/jpg/2024/05/08/heineken__4_-22134200.jpg",
+    stock: 50
+  },
+  {
+    _id: "2",
+    name: "Skol 350ml",
+    price: 5.90,
+    category: "CERVEJAS",
+    description: "Cerveja Skol lata 350ml",
+    imageUrl: "https://www.imigrantesbebidas.com.br/bebida/images/products/full/20200722131111_7891999101027.jpg",
+    stock: 30
+  },
+  {
+    _id: "3", 
+    name: "Brahma Duplo Malte",
+    price: 7.50,
+    category: "CERVEJAS",
+    description: "Cerveja Brahma 350ml",
+    imageUrl: "https://www.imigrantesbebidas.com.br/bebida/images/products/full/20220527165615_7891149102524.jpg",
+    stock: 40
+  }
+];
+
+// GET / - Listar todos os produtos
 const getProducts = async (req, res) => {
   try {
+    console.log('📦 Buscando produtos...');
+    
+    // ✅ USA MOCK DIRETAMENTE POR ENQUANTO
+    let filteredProducts = mockProducts;
     const { category, search } = req.query;
-    let filter = { isActive: true };
-
+    
     if (category) {
-      filter.category = category;
+      filteredProducts = filteredProducts.filter(p => 
+        p.category.toLowerCase() === category.toLowerCase()
+      );
     }
-
+    
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      filteredProducts = filteredProducts.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase())
+      );
     }
-
-    const products = await Product.find(filter).populate('category');
-
+    
     res.json({
       success: true,
-      count: products.length,
-      data: products
+      count: filteredProducts.length,
+      data: filteredProducts,
+      source: 'mock'
     });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar produtos: ' + error.message
+    console.log('❌ Erro ao buscar produtos:', error.message);
+    
+    res.json({
+      success: true,
+      count: mockProducts.length,
+      data: mockProducts,
+      source: 'mock-error'
     });
   }
 };
 
-
 const getProductById = async (req, res) => {
   try {
     console.log('🔍 GET BY ID - ID recebido:', req.params.id);
-    console.log('🔍 URL completa:', req.originalUrl);
+
+    const product = mockProducts.find(p => p._id === req.params.id);
     
-    const product = await Product.findById(req.params.id).populate('category');
-    
-    console.log('🔍 Produto encontrado:', product);
-    
-    if (!product || !product.isActive) {
-      console.log('❌ Produto não encontrado ou inativo');
-      return res.status(404).json({
+    if (product) {
+      res.json({
+        success: true,
+        data: product,
+        source: 'mock'
+      });
+    } else {
+      res.status(404).json({
         success: false,
         message: 'Produto não encontrado'
       });
     }
 
-    console.log('✅ Produto encontrado com sucesso');
-    res.json({
-      success: true,
-      data: product
-    });
-
   } catch (error) {
     console.log('❌ Erro no getProductById:', error.message);
+    
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar produto: ' + error.message
+      message: 'Erro interno do servidor'
     });
   }
 };
 
-// POST / - Criar produto (JÁ EXISTE)
+// ✅ FUNÇÕES SIMPLIFICADAS - SEM MONGODB POR ENQUANTO
 const createProduct = async (req, res) => {
   try {
-    const product = await Product.create(req.body);
-    await product.populate('category');
-
+    const newProduct = {
+      _id: Date.now().toString(),
+      ...req.body,
+      createdAt: new Date().toISOString()
+    };
+    
+    mockProducts.push(newProduct);
+    
     res.status(201).json({
       success: true,
-      data: product
+      data: newProduct,
+      message: 'Produto criado com sucesso!',
+      source: 'mock'
     });
 
   } catch (error) {
@@ -82,25 +126,28 @@ const createProduct = async (req, res) => {
   }
 };
 
-// PUT /:id - Atualizar produto
 const updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('category');
-
-    if (!product) {
+    const productIndex = mockProducts.findIndex(p => p._id === req.params.id);
+    
+    if (productIndex === -1) {
       return res.status(404).json({
         success: false,
         message: 'Produto não encontrado'
       });
     }
 
+    mockProducts[productIndex] = {
+      ...mockProducts[productIndex],
+      ...req.body,
+      updatedAt: new Date().toISOString()
+    };
+
     res.json({
       success: true,
-      data: product
+      data: mockProducts[productIndex],
+      message: 'Produto atualizado com sucesso!',
+      source: 'mock'
     });
 
   } catch (error) {
@@ -111,26 +158,24 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// DELETE /:id - Deletar produto (soft delete)
 const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!product) {
+    const productIndex = mockProducts.findIndex(p => p._id === req.params.id);
+    
+    if (productIndex === -1) {
       return res.status(404).json({
         success: false,
         message: 'Produto não encontrado'
       });
     }
 
+    const deletedProduct = mockProducts.splice(productIndex, 1)[0];
+
     res.json({
       success: true,
       message: 'Produto deletado com sucesso',
-      data: product
+      data: deletedProduct,
+      source: 'mock'
     });
 
   } catch (error) {
@@ -140,8 +185,6 @@ const deleteProduct = async (req, res) => {
     });
   }
 };
-
-
 
 module.exports = {
   getProducts,

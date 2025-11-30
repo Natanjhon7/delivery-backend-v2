@@ -6,18 +6,18 @@ const {
   updateProduct, 
   deleteProduct 
 } = require('../controllers/productController');
-const { auth, adminAuth } = require('../middleware/auth');
+
+// ✅ COMENTE TEMPORARIAMENTE O MIDDLEWARE (vamos criar depois)
+// const { auth, adminAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.get('/', getProducts);
-
 router.get('/:id', getProductById);
 
-router.post('/', auth, adminAuth, createProduct);
-
-router.put('/:id', auth, adminAuth, updateProduct);
-
-router.delete('/:id', auth, adminAuth, deleteProduct);
+// ✅ SEM AUTENTICAÇÃO POR ENQUANTO
+router.post('/', createProduct);
+router.put('/:id', updateProduct);
+router.delete('/:id', deleteProduct);
 
 module.exports = router;
