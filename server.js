@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
+const path = require('path');
 
 app.use(cors());
 app.use(express.json());
@@ -471,30 +472,38 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ 
     success: true,
-    status: 'OK', 
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString()
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 
-// ✅ INICIAR SERVIDOR
+app.get('/api/info', (req, res) => {
+  res.json({
+    success: true,
+    name: 'Delivery Backend API',
+    version: '2.0',
+    status: 'online',
+    environment: process.env.NODE_ENV,
+    database: 'MongoDB Atlas'
+  });
+});
+
 const startServer = async () => {
   await connectDB();
   
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`\n🎉 BACKEND DELIVERY - MONGODB REAL!`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🎉 BACKEND DELIVERY - PRODUÇÃO!`);
     console.log(`🚀 Porta: ${PORT}`);
     console.log(`📦 MongoDB: ✅ CONECTADO`);
-    console.log(`📊 Collections: products, users, categories, orders`);
-    console.log(`🔐 Sistema de autenticação: ✅ ATIVO`);
-    console.log(`🛒 Carrinho de compras: ✅ ATIVO`);
-    console.log(`📋 Sistema de pedidos: ✅ ATIVO`);
-    console.log(`🌐 URL: http://localhost:${PORT}/`);
-    console.log(`💡 Use POST /api/auth/register para criar usuário`);
+    console.log(`🌐 Ambiente: ${process.env.NODE_ENV}`);
+    console.log(`🔗 URL: https://seu-backend.onrender.com`);
+    console.log(`💡 API Health: https://seu-backend.onrender.com/health`);
   });
 };
 
