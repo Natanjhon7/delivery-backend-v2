@@ -117,8 +117,19 @@ app.get('/api/products', async (req, res) => {
     const { category, search } = req.query;
     let filter = { isActive: true };
 
-    if (category) filter.category = category;
-    if (search) filter.name = { $regex: search, $options: 'i' };
+    // ✅ FILTRO POR CATEGORIA
+    if (category) {
+      filter.category = category;
+    }
+
+    // ✅ BUSCA POR NOME/DESCRIÇÃO
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { brand: { $regex: search, $options: 'i' } }
+      ];
+    }
 
     const products = await Product.find(filter);
     
@@ -527,6 +538,124 @@ app.post('/api/products', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor: ' + error.message
+    });
+  }
+});
+
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, category, description, imageUrl, stock } = req.body;
+
+    // Verifica se o produto existe
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'Produto não encontrado'
+      });
+    }
+
+    // Atualiza o produto
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      {
+        name: name || existingProduct.name,
+        price: price !== undefined ? parseFloat(price) : existingProduct.price,
+        category: category || existingProduct.category,
+        description: description !== undefined ? description : existingProduct.description,
+        imageUrl: imageUrl !== undefined ? imageUrl : existingProduct.imageUrl,
+        stock: stock !== undefined ? parseInt(stock) : existingProduct.stock
+      },
+      { 
+        new: true, // Retorna o documento atualizado
+        runValidators: true // Executa validações do schema
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Produto atualizado com sucesso!',
+      data: updatedProduct
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao atualizar produto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor: ' + error.message
+    });
+  }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Produto não encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Produto deletado com sucesso',
+      data: product
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao deletar produto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor: ' + error.message
+    });
+  }
+});
+
+// ✅ ROTAS PARA CATEGORIAS
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categories = await Category.find({ isActive: true });
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar categorias'
+    });
+  }
+});
+
+app.post('/api/categories', async (req, res) => {
+  try {
+    const { name, description, imageUrl } = req.body;
+    
+    const category = await Category.create({
+      name,
+      description: description || '',
+      imageUrl: imageUrl || 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(name),
+      isActive: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Categoria criada com sucesso!',
+      data: category
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao criar categoria'
     });
   }
 });
