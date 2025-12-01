@@ -493,6 +493,44 @@ app.get('/api/info', (req, res) => {
   });
 });
 
+// ✅ ROTA POST PARA CRIAR PRODUTOS
+app.post('/api/products', async (req, res) => {
+  try {
+    const { name, price, category, description, imageUrl, stock } = req.body;
+
+    // Validação básica
+    if (!name || !price || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nome, preço e categoria são obrigatórios'
+      });
+    }
+
+    const product = await Product.create({
+      name,
+      price: parseFloat(price),
+      category,
+      description: description || '',
+      imageUrl: imageUrl || 'https://via.placeholder.com/300x300?text=Sem+Imagem',
+      stock: parseInt(stock) || 0,
+      isActive: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Produto criado com sucesso!',
+      data: product
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao criar produto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor: ' + error.message
+    });
+  }
+});
+
 const startServer = async () => {
   await connectDB();
   
